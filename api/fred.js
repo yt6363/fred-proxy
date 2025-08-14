@@ -1,6 +1,6 @@
 // Serverless FRED proxy with CORS + light caching (Vercel, Node 20)
 export default async function handler(req, res) {
-  // CORS so your Framer page can call this
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -15,17 +15,16 @@ export default async function handler(req, res) {
   const url = new URL("https://api.stlouisfed.org/fred/series/observations");
   url.searchParams.set("series_id", String(series_id));
   url.searchParams.set("observation_start", String(start));
-  url.searchParams.set("observation_end", String(end || new Date().toISOString().slice(0, 10)));
+  url.searchParams.set("observation_end", String(end || new Date().toISOString().slice(0,10)));
   url.searchParams.set("file_type", "json");
   url.searchParams.set("api_key", apiKey);
 
   try {
-    // Cache at the edge for 5 minutes to avoid rate limits
-    const r = await fetch(url, { next: { revalidate: 300 } });
-    const text = await r.text(); // pass through body even on non-200
+    const r = await fetch(url, { next: { revalidate: 300 } }); // cache ~5m
+    const text = await r.text();
     res.setHeader("Content-Type", "application/json");
-    return res.status(r.status).send(text);
+    res.status(r.status).send(text);
   } catch (e) {
-    return res.status(502).json({ error: String(e) });
+    res.status(502).json({ error: String(e) });
   }
 }
